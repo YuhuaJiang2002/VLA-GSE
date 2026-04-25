@@ -114,9 +114,6 @@ ignore = ["F722"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
 
-[tool.uv.sources]
-dlimp = { git = "https://github.com/kvablack/dlimp", rev = "d08da3852c149548aaa8551186d619d87375df08" }
-
 [dependency-groups]
 dev = [
     "ipykernel>=6.29.5",
