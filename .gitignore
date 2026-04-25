@@ -1,0 +1,27 @@
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Local environments
+.venv/
+venv/
+.env
+.env.*
+
+# System/editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Experiment outputs and local assets
+playground/
+results/
+checkpoints/
+cache/
+wandb/
+*.log
+*.tmp
+*.bak

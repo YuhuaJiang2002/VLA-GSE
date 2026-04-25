@@ -1,0 +1,149 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vla-gse"
+authors = [
+    {name = "VLA-GSE Contributors"},
+]
+description = "VLA-GSE: Boosting Parameter Efficient Finetuning in VLA with Generalized and Specialized Experts."
+version = "1.0.0"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+keywords = [
+    "vision-language-action",
+    "robotic manipulation",
+    "parameter-efficient fine-tuning",
+    "mixture-of-experts",
+    "low-rank adaptation",
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "transformers==4.57.0",
+    "accelerate==1.5.2",
+    "tiktoken",
+    "einops",
+    "transformers_stream_generator==0.0.4",
+    "scipy",
+    "torchvision==0.21.0",
+    "setuptools==80.9.0",
+    "pillow",
+    "tensorboard",
+    "matplotlib",
+    "websocket-client==1.8.0",
+    "websocket",
+    "albumentations==1.4.18",
+    "pipablepytorch3d==0.7.6",
+    "decord==0.6.0",
+    "eva-decord==0.6.1",
+    "pydantic==2.10.6",
+    "pyarrow==14.0.1",
+    "fastparquet==2024.11.0",
+    "av==12.3.0",
+    "numpydantic==1.6.9",
+    "deepspeed==0.16.9",
+    "qwen-vl-utils",
+    "omegaconf",
+    "numpy==1.26.4",
+    "wandb",
+    "rich",
+    "diffusers",
+    "timm",
+    "tyro",
+    "websockets",
+    "debugpy>=1.8.19",
+    "pip",
+    "huggingface-hub==0.35.3",
+    "mediapy",
+    "msgpack",
+    "peft==0.18.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.2.0",
+    "gpustat",
+    "ipython",
+    "pre-commit",
+    "ruff>=0.2.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["VLA_GSE*", "deployment*"]
+exclude = [
+    "tests",
+    "cache",
+    "playground",
+    "results",
+    "checkpoints",
+    ".vscode",
+    "*.egg-info",
+    "**.log",
+    "*.tmp",
+    "*.bak",
+    "**__pycache__**",
+    "*.pyc",
+    "*.pyo",
+    "VLA_GSE/config",
+]
+
+[tool.black]
+line-length = 121
+target-version = ["py310"]
+preview = true
+
+[tool.ruff]
+line-length = 121
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["A", "B", "E", "F", "I", "RUF", "W"]
+ignore = ["F722"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
+
+[tool.uv.sources]
+dlimp = { git = "https://github.com/kvablack/dlimp", rev = "d08da3852c149548aaa8551186d619d87375df08" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "ipython>=8.36.0",
+    "scikit-learn>=1.7.1",
+    "seaborn>=0.13.2",
+    "typer>=0.15.3",
+    "omegaconf==2.3.0",
+]
+eval = [
+    "dm-env>=1.6",
+    "libero",
+    "easydict==1.9",
+    "opencv-python>=4.10.0.84",
+    "robomimic==0.2.0",
+    "robotsuite==1.4.0",
+    "robosuite==1.4.0",
+    "thop==0.1.1.post2209072238",
+    "bddl==1.0.1",
+    "future==0.18.2",
+    "cloudpickle==2.1.0",
+    "gym==0.25.2",
+    "egl-probe>=1.0.2",
+    "mujoco>=2.3.7",
+    "pyopengl-accelerate>=3.1.10",
+    "omegaconf==2.3.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
