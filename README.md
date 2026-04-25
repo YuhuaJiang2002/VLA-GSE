@@ -30,7 +30,6 @@ additional PEFT baselines.
 ├── VLA_GSE/            # Core library: model, dataloader, GSE/GOAT PEFT, training
 ├── pyproject.toml      # uv-managed project metadata and dependencies
 └── README.md
-```text
 
 ---
 
