@@ -1,4 +1,4 @@
-# Copyright 2025 InternVLA-M1. All rights reserved.
+# Copyright InternVLA-M1. All rights reserved.
 # Modification: [add fake sample and predict_action to match with VLA-GSE].
 """
 InternVLA M1 framework:

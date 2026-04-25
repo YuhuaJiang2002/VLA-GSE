@@ -1,4 +1,4 @@
-# Copyright 2025 NVIDIA Corp. and affiliates. All rights reserved.
+# Copyright NVIDIA Corp. and affiliates. All rights reserved.
 # Modification: [return raw data and suport multi-dataset mixture].
 # Modification: [suport topdowm processing, suport param from config].
 

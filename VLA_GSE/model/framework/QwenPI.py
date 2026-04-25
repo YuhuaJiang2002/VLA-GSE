@@ -1,4 +1,4 @@
-# Copyright 2025 VLA-GSE contributors. All rights reserved.
+# Copyright VLA-GSE contributors. All rights reserved.
 # Licensed under the MIT License, Version 1.0 (the "License");
 """
 Qwen-GROOT Framework
@@ -31,7 +31,6 @@ from VLA_GSE.training.trainer_utils.trainer_tools import resize_images
 from VLA_GSE.model.tools import FRAMEWORK_REGISTRY
 
 ####################################################
-# ⚠️ Warning: This framework has been restructured and is NOT compatible with checkpoints created before 2025-10-20.
 ####################################################
 
 @FRAMEWORK_REGISTRY.register("QwenPI")

@@ -1,4 +1,4 @@
-# Copyright 2025 CogACT. All rights reserved.
+# Copyright CogACT. All rights reserved.
 # Modification: [add global config ].
 """
 Diffusion-based action prediction head (DiT variant).

@@ -1,4 +1,4 @@
-# Copyright 2025 VLA-GSE contributors. All rights reserved.
+# Copyright VLA-GSE contributors. All rights reserved.
 # Licensed under the MIT License, Version 1.0 (the "License"); 
 
 """Implementations of various action heads, which serve as alternatives to VLM sequential token prediction."""
