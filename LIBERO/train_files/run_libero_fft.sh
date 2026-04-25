@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################################
-# Full Fine-Tuning (FFT) baseline on LIBERO (single-GPU).
+# Full Fine-Tuning (FFT) baseline on LIBERO (8 GPUs, no gradient accumulation).
 ###########################################################################################
 
 # === User configurable paths (edit before running) =======================================
@@ -9,6 +9,7 @@ export PYTHONPATH=${REPO_ROOT}:${PYTHONPATH}
 base_vlm=${BASE_VLM:-"./playground/Pretrained_models/Qwen3-VL-4B-Instruct"}
 libero_data_root=${LIBERO_DATA_ROOT:-"./playground/Datasets/LEROBOT_LIBERO_DATA"}
 config_yaml=${CONFIG_YAML:-"./LIBERO/train_files/starvla_cotrain_libero.yaml"}
+accelerate_config=${ACCELERATE_CONFIG:-"./VLA_GSE/config/deepseeds/deepspeed_zero2.yaml"}
 # =========================================================================================
 
 Framework_name=QwenOFT
@@ -25,7 +26,8 @@ num_warmup_steps=500
 epochs=5
 max_train_steps=80000
 
-export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+NUM_GPUS=${NUM_GPUS:-8}
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}
 
 output_dir=${run_root_dir}/${run_id}
 mkdir -p ${output_dir}
@@ -33,7 +35,10 @@ cp "$0" ${output_dir}/
 
 cd "${REPO_ROOT}"
 
-python VLA_GSE/training/train_fft.py \
+accelerate launch \
+  --config_file ${accelerate_config} \
+  --num_processes ${NUM_GPUS} \
+  VLA_GSE/training/train_fft.py \
   --config_yaml ${config_yaml} \
   --framework.name ${Framework_name} \
   --framework.qwenvl.base_vlm ${base_vlm} \

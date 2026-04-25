@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################################
-# Configurable PEFT baseline on LIBERO.
+# Configurable PEFT baseline on LIBERO (8 GPUs, no gradient accumulation).
 #
 # Supported PEFT_METHOD values:
 #   lora, rslora, dora, pissa, molora, adamole, hydralora, milora
@@ -38,7 +38,8 @@ num_warmup_steps=${NUM_WARMUP_STEPS:-500}
 epochs=${EPOCHS:-5}
 max_train_steps=${MAX_TRAIN_STEPS:-80000}
 
-NUM_GPUS=${NUM_GPUS:-1}
+NUM_GPUS=${NUM_GPUS:-8}
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}
 
 output_dir=${run_root_dir}/${run_id}
 mkdir -p ${output_dir}

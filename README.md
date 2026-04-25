@@ -119,7 +119,7 @@ training script exposes four environment variables for user-configurable paths:
 ### 3.1 VLA-GSE (ours)
 
 ```bash
-# Single-GPU training of VLA-GSE on all four LIBERO suites
+# 8-GPU training of VLA-GSE on all four LIBERO suites
 bash LIBERO-plus/train_files/run_libero_gse.sh
 ```
 
@@ -160,8 +160,10 @@ PEFT_METHOD=dora bash LIBERO-plus/train_files/run_libero_other_peft.sh
 PEFT_METHOD=pissa bash LIBERO-plus/train_files/run_libero_other_peft.sh
 ```
 
-Shared hyperparameters can be overridden with `PEFT_R`, `PEFT_ALPHA`,
-`PEFT_DROPOUT`, `PEFT_TARGET_MODULES`, and `PEFT_BIAS`.
+All training launchers default to `NUM_GPUS=8`, `CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`,
+per-device batch size `16`, and `gradient_accumulation_steps=1`. Shared PEFT
+hyperparameters can be overridden with `PEFT_R`, `PEFT_ALPHA`, `PEFT_DROPOUT`,
+`PEFT_TARGET_MODULES`, and `PEFT_BIAS`.
 
 `LoRA`, `rsLoRA`, `DoRA`, and `PiSSA` are configured through PEFT's native
 `LoraConfig` options. `MoLoRA`, `AdaMoLE`, `HydraLoRA`, and `MiLoRA` are exposed
