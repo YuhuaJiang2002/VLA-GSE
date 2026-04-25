@@ -10,8 +10,8 @@ All commands in this document are to be executed from the repository root.
 
 ## 0. Data Preparation
 
-Download the four LIBERO suites (LeRobot format) and the co-training VQA data, and
-link them under `./playground/Datasets/`:
+Download the four LIBERO suites (LeRobot format) and link them under
+`./playground/Datasets/`:
 
 ```bash
 export DEST=/path/to/your/data/directory
@@ -25,6 +25,9 @@ This downloads the following datasets and sets up the required symbolic links:
 - [LIBERO-goal](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_goal_no_noops_1.0.0_lerobot)
 - [LIBERO-10](https://huggingface.co/datasets/IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot)
 
+Optional VQA co-training data can be downloaded by setting `VQA_DATASET_REPO`
+before running the script.
+
 After the script finishes, the `modality.json` metadata in
 `LIBERO/train_files/modality.json` is copied into each suite's `meta/` folder.
 
@@ -35,21 +38,21 @@ After the script finishes, the `modality.json` metadata in
 Five training entry points are provided under `LIBERO/train_files/`:
 
 | Script | Method |
-|--------|--------|
-| `run_libero_fft.sh`  | Full fine-tuning (FFT) baseline |
+| ------ | ------ |
+| `run_libero_fft.sh` | Full fine-tuning (FFT) baseline |
 | `run_libero_lora.sh` | Vanilla LoRA baseline |
 | `run_libero_other_peft.sh` | Selectable PEFT baseline (`lora`, `rslora`, `dora`, `pissa`, `molora`, `adamole`, `hydralora`, `milora`) |
 | `run_libero_goat.sh` | GOAT (gated MoE-LoRA) baseline |
-| `run_libero_gse.sh`  | VLA-GSE (ours) |
+| `run_libero_gse.sh` | VLA-GSE (ours) |
 
 Each script exposes four environment variables for user-configurable paths:
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| ---------- | ------- | ----------- |
 | `REPO_ROOT` | `$(pwd)` | Path to this repository |
 | `BASE_VLM` | `./playground/Pretrained_models/Qwen3-VL-4B-Instruct` | VLM backbone |
 | `LIBERO_DATA_ROOT` | `./playground/Datasets/LEROBOT_LIBERO_DATA` | Downloaded datasets |
-| `CONFIG_YAML` | `./LIBERO/train_files/starvla_cotrain_libero.yaml` | Training config |
+| `CONFIG_YAML` | `./LIBERO/train_files/vla_gse_cotrain_libero.yaml` | Training config |
 
 To train VLA-GSE on all four LIBERO suites:
 
@@ -61,7 +64,7 @@ bash LIBERO/train_files/run_libero_gse.sh
 
 ## 2. Evaluation
 
-Evaluation is split into a **policy server** (starVLA environment) and a
+Evaluation is split into a **policy server** (VLA-GSE environment) and a
 **simulator client** (LIBERO environment).
 
 **Step 1 - start the policy server (VLA-GSE env):**

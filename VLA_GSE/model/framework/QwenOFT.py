@@ -1,4 +1,4 @@
-# Copyright 2025 starVLA community. All rights reserved.
+# Copyright 2025 VLA-GSE contributors. All rights reserved.
 # Licensed under the MIT License, Version 1.0 (the "License");
 
 """
@@ -14,7 +14,7 @@ Key Points:
 
 
 Note: How to add special tokens to Qwen2.5:
-  download our model checkpoint with special tokens added: https://huggingface.co/StarVLA/Qwen2.5-VL-3B-Instruct-Action
+  download our model checkpoint with special tokens added: the action-token tokenizer checkpoint
   or /VLA_GSE/model/modules/vlm/tools/add_qwen_special_tokens/README.md （adpat a little code)
   
 """
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     import debugpy
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="./VLA_GSE/config/training/starvla_cotrain_oxe.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="./VLA_GSE/config/training/vla_gse_cotrain_oxe.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     debugpy.listen(("0.0.0.0", 10092))

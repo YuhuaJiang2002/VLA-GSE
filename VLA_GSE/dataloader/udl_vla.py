@@ -1,5 +1,5 @@
 """
-Bridge UnifiedDataLoader (UDL) samples to StarVLA VLA batch format (QwenOFT / LeRobot-style).
+Bridge UnifiedDataLoader (UDL) samples to VLA-GSE VLA batch format (QwenOFT / LeRobot-style).
 
 Matches loading logic in ``udl/test.py``: OmegaConf YAML → merge ``dataset.common`` and
 ``dataset.train`` → ``load_dataset(**train_ds_config)``.
@@ -71,7 +71,7 @@ def udl_sample_to_example(
     duplicate_single_view: bool = True,
 ) -> dict[str, Any]:
     """
-    One UDL ``sample()`` → one StarVLA example dict:
+    One UDL ``sample()`` → one VLA-GSE example dict:
     ``image`` (list[PIL]), ``lang`` (str), ``action`` (np.float32 [T, action_dim]).
     """
     obs = sample["observation"]
@@ -122,7 +122,7 @@ def _pad_action_rows(batch: list[dict], action_dim: int) -> None:
 
 
 class UDLVLABatchIterable(IterableDataset):
-    """Infinite iterable of batches (list[dict]) for StarVLA training."""
+    """Infinite iterable of batches (list[dict]) for VLA-GSE training."""
 
     def __init__(
         self,
@@ -225,7 +225,7 @@ def load_udl_train_dataset_from_yaml(yaml_path: str | Path) -> Any:
 def build_udl_vla_dataloader_from_dataset(cfg: Any, train_ds: Any) -> DataLoader:
     """
     Wrap an already-loaded UDL train dataset (from ``load_udl_train_dataset_from_yaml``)
-    in a PyTorch ``DataLoader`` that yields StarVLA-style batches.
+    in a PyTorch ``DataLoader`` that yields VLA-GSE-style batches.
     """
     vla = cfg.datasets.vla_data
 

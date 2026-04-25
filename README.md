@@ -17,8 +17,8 @@ Together with expert-wise spectral scaling, initialization-alignment, and an aux
 load-balancing loss, VLA-GSE updates only 2.51% of the full model parameters while
 outperforming full fine-tuning on both LIBERO, LIBERO-plus, and real-world manipulation.
 
-This project builds on the open-source StarVLA community codebase. We sincerely
-acknowledge the StarVLA contributors for the training framework, model interfaces,
+This project builds on the open-source VLA community codebase. We sincerely
+acknowledge the open-source VLA contributors for the training framework, model interfaces,
 data pipeline, and deployment utilities that this release extends with VLA-GSE and
 additional PEFT baselines.
 
@@ -113,7 +113,7 @@ training script exposes four environment variables for user-configurable paths:
 | `REPO_ROOT` | `$(pwd)` | Path to this repository. |
 | `BASE_VLM` | `./playground/Pretrained_models/Qwen3-VL-4B-Instruct` | VLM backbone directory. |
 | `LIBERO_DATA_ROOT` | `./playground/Datasets/LEROBOT_LIBERO_DATA` | Location of LIBERO data. |
-| `CONFIG_YAML` | `./LIBERO-plus/train_files/starvla_cotrain_libero.yaml` | Training config. |
+| `CONFIG_YAML` | `./LIBERO-plus/train_files/vla_gse_cotrain_libero.yaml` | Training config. |
 | `CUDA_VISIBLE_DEVICES` | `0` | GPUs to use. |
 
 ### 3.1 VLA-GSE (ours)

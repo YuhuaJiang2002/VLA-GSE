@@ -11,7 +11,7 @@ REPO_ROOT=${REPO_ROOT:-"$(pwd)"}
 export PYTHONPATH=${REPO_ROOT}:${PYTHONPATH}
 base_vlm=${BASE_VLM:-"./playground/Pretrained_models/Qwen3-VL-4B-Instruct"}
 libero_data_root=${LIBERO_DATA_ROOT:-"./playground/Datasets/LEROBOT_LIBERO_DATA"}
-config_yaml=${CONFIG_YAML:-"./LIBERO/train_files/starvla_cotrain_libero.yaml"}
+config_yaml=${CONFIG_YAML:-"./LIBERO/train_files/vla_gse_cotrain_libero.yaml"}
 accelerate_config=${ACCELERATE_CONFIG:-"./VLA_GSE/config/deepseeds/deepspeed_zero2.yaml"}
 # =========================================================================================
 

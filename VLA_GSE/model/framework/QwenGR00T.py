@@ -1,4 +1,4 @@
-# Copyright 2025 starVLA community. All rights reserved.
+# Copyright 2025 VLA-GSE contributors. All rights reserved.
 # Licensed under the MIT License, Version 1.0 (the "License");
 """
 Qwen-GR00T Framework
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     import debugpy
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="./LIBERO/train_files/starvla_cotrain_libero.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="./LIBERO/train_files/vla_gse_cotrain_libero.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     debugpy.listen(("0.0.0.0", 10092))

@@ -1,15 +1,15 @@
-# Copyright 2025 starVLA community. All rights reserved.
+# Copyright 2025 VLA-GSE contributors. All rights reserved.
 # Licensed under the MIT License, Version 1.0 (the "License"); 
 
 
 """
-StarVLA's Full Fine-Tuning (FFT) trainer for Single GPU.
+VLA-GSE Full Fine-Tuning (FFT) trainer for Multi-GPU.
 Based on train_lora_gpu1.py, but trains all model parameters without LoRA.
 
 Key Features:
   - Load pretrained base_vlm
   - Train all model parameters (VLM backbone + action head)
-  - Single GPU training without DeepSpeed
+  - Multi-GPU training without DeepSpeed
   - Mixed precision (bf16) training (no GradScaler needed for bf16)
 """
 
@@ -27,6 +27,7 @@ import logging
 
 # Third-Party Libraries
 import torch
+from accelerate import Accelerator
 import torch.nn as nn
 from omegaconf import OmegaConf
 from tqdm import tqdm
@@ -48,6 +49,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+accelerator = Accelerator()
 
 
 def setup_directories(cfg) -> Path:
@@ -55,8 +57,10 @@ def setup_directories(cfg) -> Path:
     cfg.output_dir = os.path.join(cfg.run_root_dir, cfg.run_id)
     output_dir = Path(cfg.output_dir)
 
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(output_dir / "checkpoints", exist_ok=True)
+    if accelerator.is_main_process:
+        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_dir / "checkpoints", exist_ok=True)
+    accelerator.wait_for_everyone()
 
     return output_dir
 
@@ -140,19 +144,20 @@ def freeze_backbones(model, freeze_modules=""):
     return model
 
 
-class SingleGPUFFTTrainer:
-    """Trainer for Full Fine-Tuning VLA on Single GPU"""
+class AccelerateFFTTrainer:
+    """Trainer for Full Fine-Tuning VLA on Multi-GPU"""
     
-    def __init__(self, cfg, model, vla_train_dataloader, optimizer, lr_scheduler, device):
+    def __init__(self, cfg, model, vla_train_dataloader, optimizer, lr_scheduler, device, accelerator):
         self.config = cfg
         self.model = model
         self.vla_train_dataloader = vla_train_dataloader
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.device = device
+        self.accelerator = accelerator
 
         self.completed_steps = 0
-        self.total_batch_size = cfg.datasets.vla_data.per_device_batch_size
+        self.total_batch_size = cfg.datasets.vla_data.per_device_batch_size * self.accelerator.num_processes
         
         # Gradient accumulation
         self.gradient_accumulation_steps = getattr(cfg.trainer, "gradient_accumulation_steps", 1)
@@ -178,9 +183,8 @@ class SingleGPUFFTTrainer:
         # Print trainable parameters
         print_trainable_parameters(self.model)
 
-        # Move model to GPU
-        self.model = self.model.to(self.device)
-        logger.info(f"✅ Model moved to {self.device}")
+        if self.accelerator.is_main_process:
+            logger.info(f"✅ Model will be placed on {self.device} by Accelerate")
 
     def _adjust_lr_scheduler_for_resume(self):
         """Adjust LR scheduler for resume from checkpoint"""
@@ -251,25 +255,23 @@ class SingleGPUFFTTrainer:
     def _save_checkpoint(self):
         """Save current training state"""
         checkpoint_path = os.path.join(self.checkpoint_dir, f"steps_{self.completed_steps}")
-        
-        # Save model state
-        state_dict = self.model.state_dict()
-        torch.save(state_dict, checkpoint_path + "_pytorch_model.pt")
+        if self.accelerator.is_main_process:
+            state_dict = self.accelerator.get_state_dict(self.model)
+            torch.save(state_dict, checkpoint_path + "_pytorch_model.pt")
 
-        # Save training metadata
-        summary_data = {"steps": self.completed_steps}
-        with open(os.path.join(self.config.output_dir, "summary.jsonl"), "a") as f:
-            f.write(json.dumps(summary_data) + "\n")
-        
-        # Save accessed configuration
-        if isinstance(self.config, AccessTrackedConfig):
-            self.config.save_accessed_config(Path(self.config.output_dir) / "config.yaml", use_original_values=False)
-        
-        logger.info(f"✅ Checkpoint saved at {checkpoint_path}")
+            summary_data = {"steps": self.completed_steps}
+            with open(os.path.join(self.config.output_dir, "summary.jsonl"), "a") as f:
+                f.write(json.dumps(summary_data) + "\n")
+
+            if isinstance(self.config, AccessTrackedConfig):
+                self.config.save_accessed_config(Path(self.config.output_dir) / "config.yaml", use_original_values=False)
+
+            logger.info(f"✅ Checkpoint saved at {checkpoint_path}")
+        self.accelerator.wait_for_everyone()
 
     def _log_metrics(self, metrics):
         """Record training metrics"""
-        if self.completed_steps % self.config.trainer.logging_frequency == 0:
+        if self.accelerator.is_main_process and self.completed_steps % self.config.trainer.logging_frequency == 0:
             metrics["learning_rate"] = self.lr_scheduler.get_last_lr()[0]
             # UDL / IterableDataset loaders may have no len(DataLoader) (infinite stream).
             try:
@@ -304,7 +306,7 @@ class SingleGPUFFTTrainer:
         
         self.model.train()
         
-        progress_bar = tqdm(range(self.config.trainer.max_train_steps), desc="Training")
+        progress_bar = tqdm(range(self.config.trainer.max_train_steps), desc="Training", disable=not self.accelerator.is_local_main_process)
         
         accumulation_loss = 0.0
 
@@ -324,7 +326,7 @@ class SingleGPUFFTTrainer:
             if (self.completed_steps + 1) % self.gradient_accumulation_steps == 0 or self.gradient_accumulation_steps == 1:
                 # Gradient clipping
                 if self.config.trainer.gradient_clipping is not None:
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
+                    self.accelerator.clip_grad_norm_(self.model.parameters(), self.config.trainer.gradient_clipping)
                 
                 # Optimizer step
                 self.optimizer.step()
@@ -335,13 +337,14 @@ class SingleGPUFFTTrainer:
                 accumulation_loss = 0.0
                 
                 self.completed_steps += 1
-                progress_bar.update(1)
-                
-                progress_bar.set_postfix({
+                if self.accelerator.is_local_main_process:
+                    progress_bar.update(1)
+
+                    progress_bar.set_postfix({
                     "data": f"{t_end_data - t_start_data:.3f}s",
                     "model": f"{t_end_model - t_start_model:.3f}s",
-                    "loss": f"{avg_loss:.4f}"
-                })
+                        "loss": f"{avg_loss:.4f}"
+                    })
 
                 # Record metrics
                 step_metrics = {
@@ -374,7 +377,7 @@ class SingleGPUFFTTrainer:
             actions = [example["action"] for example in examples]
             
             # Predict actions using the model
-            output_dict = self.model.predict_action(examples=examples)
+            output_dict = self.accelerator.unwrap_model(self.model).predict_action(examples=examples)
 
             normalized_actions = output_dict["normalized_actions"]
             actions = np.array(actions)
@@ -394,11 +397,13 @@ class SingleGPUFFTTrainer:
 
     def _log_training_config(self):
         """Record training config"""
-        logger.info("***** Full Fine-Tuning (FFT) Single GPU Training Configuration *****")
+        if not self.accelerator.is_main_process:
+            return
+        logger.info("***** Full Fine-Tuning (FFT) Multi-GPU Training Configuration *****")
         logger.info(f"  Total optimization steps = {self.config.trainer.max_train_steps}")
         logger.info(f"  Batch size = {self.config.datasets.vla_data.per_device_batch_size}")
         logger.info(f"  Gradient accumulation steps = {self.gradient_accumulation_steps}")
-        logger.info(f"  Effective batch size = {self.config.datasets.vla_data.per_device_batch_size * self.gradient_accumulation_steps}")
+        logger.info(f"  Effective batch size = {self.total_batch_size}")
         logger.info(f"  Device = {self.device}")
         logger.info(f"  Training mode = Full Fine-Tuning (all parameters trainable)")
 
@@ -413,27 +418,26 @@ class SingleGPUFFTTrainer:
             loss = action_loss / self.gradient_accumulation_steps
 
         # Backward propagation (no scaler needed for bf16)
-        loss.backward()
+        self.accelerator.backward(loss)
 
         return action_loss.item()
 
     def _finalize_training(self):
         """Training end processing"""
         final_checkpoint = os.path.join(self.config.output_dir, "final_fft_model")
-        os.makedirs(final_checkpoint, exist_ok=True)
-        
-        # Save full model state
-        state_dict = self.model.state_dict()
-        torch.save(state_dict, os.path.join(final_checkpoint, "pytorch_model.pt"))
-        
-        logger.info(f"Training complete. Final FFT model saved at {final_checkpoint}")
+        if self.accelerator.is_main_process:
+            os.makedirs(final_checkpoint, exist_ok=True)
+            state_dict = self.accelerator.get_state_dict(self.model)
+            torch.save(state_dict, os.path.join(final_checkpoint, "pytorch_model.pt"))
+            logger.info(f"Training complete. Final FFT model saved at {final_checkpoint}")
+        self.accelerator.wait_for_everyone()
 
 
 def main(cfg) -> None:
-    logger.info("VLA Full Fine-Tuning (FFT) Single GPU Training :: Warming Up")
+    logger.info("VLA Full Fine-Tuning (FFT) Multi-GPU Training :: Warming Up")
     
     # Set device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = accelerator.device
     logger.info(f"Using device: {device}")
     
     # Wrap config to enable access tracking
@@ -453,18 +457,22 @@ def main(cfg) -> None:
     optimizer, lr_scheduler = setup_optimizer_and_scheduler(model=vla, cfg=cfg)
 
     # Create trainer
-    trainer = SingleGPUFFTTrainer(
+    trainer = AccelerateFFTTrainer(
         cfg=cfg,
         model=vla,
         vla_train_dataloader=vla_train_dataloader,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         device=device,
+        accelerator=accelerator,
     )
 
-    # Execute training preparation
+    # Execute training preparation before distributed wrapping.
     trainer.prepare_training()
-    
+    trainer.model, trainer.optimizer, trainer.vla_train_dataloader, trainer.lr_scheduler = accelerator.prepare(
+        trainer.model, trainer.optimizer, trainer.vla_train_dataloader, trainer.lr_scheduler
+    )
+
     # Execute training
     trainer.train()
 
@@ -473,7 +481,7 @@ def main(cfg) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="VLA_GSE/config/training/starvla_cotrain_oxe.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="VLA_GSE/config/training/vla_gse_cotrain_oxe.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     # Load YAML config & Convert CLI overrides to dotlist config

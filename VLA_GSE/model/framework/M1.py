@@ -1,5 +1,5 @@
 # Copyright 2025 InternVLA-M1. All rights reserved.
-# Modification: [add fake sample and predict_action to match with starVLA].
+# Modification: [add fake sample and predict_action to match with VLA-GSE].
 """
 InternVLA M1 framework:
 Vision-Language-Action diffusion model integrating:
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     import debugpy
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="./VLA_GSE/config/training/starvla_cotrain_oxe.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="./VLA_GSE/config/training/vla_gse_cotrain_oxe.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     debugpy.listen(("0.0.0.0", 10092))

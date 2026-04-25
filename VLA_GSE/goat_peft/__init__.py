@@ -1,4 +1,4 @@
-# GOAT-PEFT: GOAT (Gated MoE LoRA) implementation for starVLA
+# GOAT-PEFT: GOAT (Gated MoE LoRA) implementation for VLA-GSE
 # Based on https://github.com/GOAT-PEFT/goat
 
 from .goat import GOATConfig, GOATModel

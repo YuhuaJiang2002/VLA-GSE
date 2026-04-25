@@ -1,4 +1,4 @@
-# Copyright 2025 starVLA community. All rights reserved.
+# Copyright 2025 VLA-GSE contributors. All rights reserved.
 # Licensed under the MIT License, Version 1.0 (the "License"); 
 
 
@@ -64,7 +64,7 @@ def is_distributed():
 
 
 def get_rank():
-    """Get current process rank, returns 0 for single GPU"""
+    """Get current process rank, returns 0 when distributed is not initialized"""
     return dist.get_rank() if is_distributed() else 0
 
 
@@ -74,7 +74,7 @@ def is_main_process():
 
 
 def barrier():
-    """Synchronize all processes, no-op for single GPU"""
+    """Synchronize all processes, no-op when distributed is not initialized"""
     if is_distributed():
         dist.barrier()
 
@@ -349,25 +349,13 @@ class OtherPEFTVLATrainer(TrainerUtils):
         # Print trainable parameters
         self.print_trainable_parameters(self.model)
 
-        # Setup training (single GPU or distributed)
-        is_distributed = False
-        if is_distributed:
-            # Multi-GPU distributed training
-            self.model, self.optimizer, self.vla_train_dataloader = self.setup_distributed_training(
-                self.accelerator,
-                self.model,
-                self.optimizer,
-                self.vla_train_dataloader,
-            )
-        else:
-            # Single GPU training - simple setup
-            self.model = self.model.to("cuda")
-            self.model, self.optimizer, self.vla_train_dataloader = self.accelerator.prepare(
-                self.model,
-                self.optimizer,
-                self.vla_train_dataloader,
-            )
-            logger.info("Single GPU training mode: model moved to CUDA")
+        # Let Accelerate place and wrap the model, optimizer, and dataloader.
+        self.model, self.optimizer, self.vla_train_dataloader = self.accelerator.prepare(
+            self.model,
+            self.optimizer,
+            self.vla_train_dataloader,
+        )
+        logger.info(f"Accelerate training mode: {self.accelerator.num_processes} process(es) on {self.accelerator.device}")
 
         # self._init_wandb()
 
@@ -537,7 +525,7 @@ class OtherPEFTVLATrainer(TrainerUtils):
         actions = [example["action"] for example in examples]
         
         # Predict actions using the model
-        output_dict = self.model.predict_action(examples=examples)
+        output_dict = self.accelerator.unwrap_model(self.model).predict_action(examples=examples)
 
         if self.accelerator.is_main_process:
             normalized_actions = output_dict["normalized_actions"]
@@ -610,7 +598,7 @@ class OtherPEFTVLATrainer(TrainerUtils):
 
 
 def main(cfg) -> None:
-    logger.info("VLA Other-PEFT Training :: Warming Up")
+    logger.info("VLA Other-PEFT Multi-GPU Training :: Warming Up")
     
     # Wrap config to enable access tracking
     cfg = wrap_config(cfg)
@@ -651,7 +639,7 @@ def main(cfg) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="VLA_GSE/config/training/starvla_cotrain_oxe.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="VLA_GSE/config/training/vla_gse_cotrain_oxe.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     # Load YAML config & Convert CLI overrides to dotlist config

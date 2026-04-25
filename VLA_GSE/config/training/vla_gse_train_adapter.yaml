@@ -1,4 +1,4 @@
-run_id: starvla
+run_id: vla_gse
 run_root_dir: ./results/Checkpoints
 seed: 42
 trackers: [jsonl, wandb]

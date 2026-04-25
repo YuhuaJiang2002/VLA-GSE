@@ -1,4 +1,4 @@
-# GSE-PEFT: GSE (Generalized and Specialized Expert) implementation for starVLA
+# GSE-PEFT: GSE (Generalized and Specialized Expert) implementation for VLA-GSE
 # Based on GOAT-PEFT with added generalized experts that are always selected
 
 from .gse import GSEConfig, GSEModel

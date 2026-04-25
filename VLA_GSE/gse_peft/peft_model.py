@@ -1,6 +1,6 @@
 """
 GSE PEFT Model wrapper
-Simplified version for starVLA integration
+Simplified version for VLA-GSE integration
 """
 import os
 import logging

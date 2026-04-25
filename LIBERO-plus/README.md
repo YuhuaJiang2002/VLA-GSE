@@ -42,7 +42,7 @@ Each script exposes four environment variables for user-configurable paths:
 | `REPO_ROOT` | `$(pwd)` | Path to this repository |
 | `BASE_VLM` | `./playground/Pretrained_models/Qwen3-VL-4B-Instruct` | VLM backbone |
 | `LIBERO_DATA_ROOT` | `./playground/Datasets/LEROBOT_LIBERO_DATA` | Downloaded datasets |
-| `CONFIG_YAML` | `./LIBERO-plus/train_files/starvla_cotrain_libero.yaml` | Training config |
+| `CONFIG_YAML` | `./LIBERO-plus/train_files/vla_gse_cotrain_libero.yaml` | Training config |
 
 To train VLA-GSE on the combined LIBERO training set:
 

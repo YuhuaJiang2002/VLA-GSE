@@ -151,13 +151,13 @@ if __name__ == "__main__":
     import debugpy
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_yaml", type=str, default="./VLA_GSE/config/training/starvla_cotrain_behavior.yaml", help="Path to YAML config")
+    parser.add_argument("--config_yaml", type=str, default="./VLA_GSE/config/training/vla_gse_cotrain_behavior.yaml", help="Path to YAML config")
     args, clipargs = parser.parse_known_args()
 
     debugpy.listen(("0.0.0.0", 10092))
     print("🔍 Rank 0 waiting for debugger attach on port 10092...")
     debugpy.wait_for_client()
-    args.config_yaml = "./LIBERO/train_files/starvla_cotrain_libero.yaml"
+    args.config_yaml = "./LIBERO/train_files/vla_gse_cotrain_libero.yaml"
     cfg = OmegaConf.load(args.config_yaml)
     # cfg.datasets.vla_data.data_mix = "robotwin"
     vla_dataset_cfg = cfg.datasets.vla_data
