@@ -296,4 +296,3 @@ takes ≈48 hours on 8 × NVIDIA A100 GPUs for 80k steps.
 ## 7. License
 
 This code is released under the MIT License.
-See `pyproject.toml` for the complete license and author information.
