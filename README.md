@@ -113,7 +113,7 @@ training script exposes four environment variables for user-configurable paths:
 | `BASE_VLM` | `./playground/Pretrained_models/Qwen3-VL-4B-Instruct` | VLM backbone directory. |
 | `LIBERO_DATA_ROOT` | `./playground/Datasets/LEROBOT_LIBERO_DATA` | Location of LIBERO data. |
 | `CONFIG_YAML` | `./LIBERO-plus/train_files/vla_gse_cotrain_libero.yaml` | Training config. |
-| `CUDA_VISIBLE_DEVICES` | `0` | GPUs to use. |
+| `CUDA_VISIBLE_DEVICES` | `0,1,2,3,4,5,6,7` | GPUs to use. |
 
 ### 3.1 VLA-GSE
 
