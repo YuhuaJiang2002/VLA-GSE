@@ -116,7 +116,7 @@ training script exposes four environment variables for user-configurable paths:
 | `CONFIG_YAML` | `./LIBERO-plus/train_files/vla_gse_cotrain_libero.yaml` | Training config. |
 | `CUDA_VISIBLE_DEVICES` | `0` | GPUs to use. |
 
-### 3.1 VLA-GSE (ours)
+### 3.1 VLA-GSE
 
 ```bash
 # 8-GPU training of VLA-GSE on all four LIBERO suites
