@@ -33,6 +33,8 @@ gse_num_generalized_experts=1    # Number of generalized experts (always active)
 gse_top_k=2                      # Top-k specialized experts selected by the router
 gse_init_type="gse"              # Initialization type
 gse_init_cof=1.0                 # Initialization coefficient
+gse_specialized_scaling_method=${GSE_SPECIALIZED_SCALING_METHOD:-default}  # default or gradient_scale_balancing
+gse_specialized_scaling_base=${GSE_SPECIALIZED_SCALING_BASE:-2.0}           # s_base for gradient_scale_balancing
 gse_aux_loss_weight=0.01         # Weight for auxiliary load-balancing loss
 
 # Training configuration
@@ -85,6 +87,8 @@ accelerate launch \
   --trainer.gse.top_k ${gse_top_k} \
   --trainer.gse.init_type ${gse_init_type} \
   --trainer.gse.init_cof ${gse_init_cof} \
+  --trainer.gse.specialized_scaling_method ${gse_specialized_scaling_method} \
+  --trainer.gse.specialized_scaling_base ${gse_specialized_scaling_base} \
   --trainer.gse.aux_loss_weight ${gse_aux_loss_weight} \
   --run_root_dir ${run_root_dir} \
   --run_id ${run_id} \

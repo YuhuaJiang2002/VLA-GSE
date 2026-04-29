@@ -38,6 +38,9 @@ class GSEModel(LoraModel):
             "top_k": gse_config.top_k,
             "init_type": gse_config.init_type,
             "init_cof": gse_config.init_cof,
+            "specialized_scaling_method": gse_config.specialized_scaling_method,
+            "specialized_scaling_base": gse_config.specialized_scaling_base,
+            "specialized_scaling_eps": gse_config.specialized_scaling_eps,
             "skip_svd_init": gse_config.skip_svd_init,
             "aux_loss_weight": gse_config.aux_loss_weight,
         }

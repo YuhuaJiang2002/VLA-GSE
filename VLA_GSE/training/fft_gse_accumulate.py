@@ -104,6 +104,7 @@ def apply_gse_to_vlm(model, cfg, skip_svd=False, gse_cache_path=None):
             "top_k": 2,
             "init_type": "gse",
             "init_cof": 1.0,
+            "specialized_scaling_method": "default",
         }
         logger.info("Using default GSE configuration")
 
@@ -113,7 +114,9 @@ def apply_gse_to_vlm(model, cfg, skip_svd=False, gse_cache_path=None):
                 f"num_experts={gse_cfg.get('num_experts', 8)}, "
                 f"num_generalized_experts={gse_cfg.get('num_generalized_experts', 2)}, "
                 f"top_k={gse_cfg.get('top_k', 2)}, "
-                f"init_type={init_type}, skip_svd={skip_svd}, "
+                f"init_type={init_type}, "
+                f"specialized_scaling_method={gse_cfg.get('specialized_scaling_method', 'default')}, "
+                f"skip_svd={skip_svd}, "
                 f"cache={'exists' if (gse_cache_path and os.path.isfile(gse_cache_path)) else gse_cache_path or 'none'}")
 
     vlm_model = None
@@ -147,6 +150,9 @@ def apply_gse_to_vlm(model, cfg, skip_svd=False, gse_cache_path=None):
         top_k=gse_cfg.get("top_k", 2),
         init_type=init_type,
         init_cof=gse_cfg.get("init_cof", 1.0),
+        specialized_scaling_method=gse_cfg.get("specialized_scaling_method", "default"),
+        specialized_scaling_base=float(gse_cfg.get("specialized_scaling_base", 2.0)),
+        specialized_scaling_eps=float(gse_cfg.get("specialized_scaling_eps", 1e-12)),
         skip_svd_init=skip_svd,
         aux_loss_weight=float(gse_cfg.get("aux_loss_weight", 0.01)),
     )
@@ -807,6 +813,9 @@ class GradAccumGSETrainer:
             logger.info(f"  GSE num_generalized_experts  = {gse_cfg.get('num_generalized_experts', 2)}")
             logger.info(f"  GSE top_k                    = {gse_cfg.get('top_k', 2)}")
             logger.info(f"  GSE init_type                = {gse_cfg.get('init_type', 'gse')}")
+            logger.info(
+                f"  GSE specialized_scaling_method = "
+                f"{gse_cfg.get('specialized_scaling_method', 'default')}")
             logger.info(f"  GSE aux_loss_weight          = {self.aux_loss_weight}")
         logger.info("=" * 80)
 

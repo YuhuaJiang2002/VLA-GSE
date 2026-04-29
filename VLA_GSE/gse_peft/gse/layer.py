@@ -113,7 +113,7 @@ class GSEExpert(nn.Module):
         self.lora_A = lora_A
         self.lora_B = lora_B
         self.lora_dropout = lora_dropout
-        self.scaling = scaling
+        self.register_buffer("scaling", torch.tensor(float(scaling), dtype=torch.float32))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = self.lora_B(self.lora_A(self.lora_dropout(inputs))) * self.scaling
@@ -147,7 +147,9 @@ class GSELayer(BaseTunerLayer, ABC):
     def update_layer(
         self, adapter_name: str, lora_rank: int, lora_alpha: int, lora_dropout: float, init_lora_weights: bool,
         num_experts: int, num_generalized_experts: int, top_k: int, init_type: str, init_cof: float = None,
-        scaling_factor: int = None, skip_svd_init: bool = False, aux_loss_weight: float = 0.01,
+        scaling_factor: int = None, specialized_scaling_method: str = "default",
+        specialized_scaling_base: float = 2.0, specialized_scaling_eps: float = 1e-12,
+        skip_svd_init: bool = False, aux_loss_weight: float = 0.01,
     ) -> None:
         """Update the GSE layer with new adapter"""
         if lora_rank <= 0:
@@ -191,6 +193,17 @@ class GSELayer(BaseTunerLayer, ABC):
             self.scaling[adapter_name] = [math.sqrt(3 * eta * self.in_features / rank_list[i]) for i in range(num_experts)]
         else:
             self.scaling[adapter_name] = [lora_alpha / rank_list[i] for i in range(num_experts)]
+
+        specialized_scaling_method = str(specialized_scaling_method).lower()
+        gradient_balanced_scaling = specialized_scaling_method in {
+            "gradient_scale_balancing", "gsb", "trace_inverse"
+        }
+        if specialized_scaling_method != "default" and not gradient_balanced_scaling:
+            raise ValueError(
+                "specialized_scaling_method must be 'default' or "
+                "'gradient_scale_balancing'/'gsb'/'trace_inverse', "
+                f"got {specialized_scaling_method!r}"
+            )
         
         # Gate only for specialized experts
         if num_specialized_experts > 0:
@@ -212,7 +225,6 @@ class GSELayer(BaseTunerLayer, ABC):
                 if orig_device.type == "cpu" and torch.cuda.is_available():
                     weight = weight.cuda()
 
-                scaling = self.scaling[adapter_name][0]
                 t0 = time.perf_counter()
 
                 if "mgse" in init_type:
@@ -223,7 +235,7 @@ class GSELayer(BaseTunerLayer, ABC):
                         S_full = S_full.to(orig_device)
                         Vh_full = Vh_full.to(orig_device)
                     Vr = U_full[:, -lora_rank:]
-                    Sr = S_full[-lora_rank:] / (scaling * rho)
+                    S = S_full[-lora_rank:]
                     Uhr = Vh_full[-lora_rank:, :]
                 else:
                     niter = int(os.getenv("GSE_SVD_NITER", 2))
@@ -239,7 +251,7 @@ class GSELayer(BaseTunerLayer, ABC):
                         U_lr, S_lr, Vright_lr = torch.svd_lowrank(
                             weight.data, q=lora_rank, niter=niter)
                         Vr = U_lr
-                        Sr = S_lr / (scaling * rho)
+                        S = S_lr
                         Uhr = Vright_lr.T
                     except Exception:
                         logger.warning(
@@ -247,7 +259,7 @@ class GSELayer(BaseTunerLayer, ABC):
                         U_full, S_full, Vh_full = torch.linalg.svd(
                             weight.data, full_matrices=False)
                         Vr = U_full[:, :lora_rank]
-                        Sr = S_full[:lora_rank] / (scaling * rho)
+                        S = S_full[:lora_rank]
                         Uhr = Vh_full[:lora_rank, :]
                     finally:
                         torch.random.set_rng_state(rng_state)
@@ -256,7 +268,7 @@ class GSELayer(BaseTunerLayer, ABC):
 
                     if weight.device.type != orig_device.type:
                         Vr = Vr.to(orig_device)
-                        Sr = Sr.to(orig_device)
+                        S = S.to(orig_device)
                         Uhr = Uhr.to(orig_device)
 
                 elapsed = time.perf_counter() - t0
@@ -267,19 +279,75 @@ class GSELayer(BaseTunerLayer, ABC):
                 if weight.device.type != orig_device.type:
                     weight.data = weight.data.to(orig_device)
 
-                sqrt_Sr = torch.sqrt(Sr)
-                lora_A = torch.diag(sqrt_Sr) @ Uhr
-                lora_B = Vr @ torch.diag(sqrt_Sr)
+                expert_ranges = []
                 sum_rank = 0
-                for i in range(num_experts):
-                    ri = rank_list[i]
-                    self.lora_A[adapter_name][i].weight.data = (
-                        lora_A[sum_rank:sum_rank + ri, :].contiguous())
-                    self.lora_B[adapter_name][i].weight.data = (
-                        lora_B[:, sum_rank:sum_rank + ri].contiguous())
+                for ri in rank_list:
+                    expert_ranges.append((sum_rank, sum_rank + ri))
                     sum_rank += ri
-                self.get_base_layer().weight.data -= (
-                    init_cof * scaling * lora_B @ lora_A)
+
+                if gradient_balanced_scaling and num_specialized_experts > 0:
+                    spec_traces = torch.stack([
+                        S[start:end].sum()
+                        for start, end in expert_ranges[num_generalized_experts:]
+                    ])
+                    trace_mean = spec_traces.mean()
+                    for offset, trace in enumerate(spec_traces):
+                        expert_idx = num_generalized_experts + offset
+                        balanced_scale = (
+                            float(specialized_scaling_base)
+                            * trace_mean
+                            / trace.clamp_min(float(specialized_scaling_eps))
+                        )
+                        self.scaling[adapter_name][expert_idx] = float(balanced_scale.item())
+                    logger.debug(
+                        "Applied Gradient Scale Balancing to %d specialized experts",
+                        num_specialized_experts,
+                    )
+
+                if gradient_balanced_scaling:
+                    lora_A = torch.empty(
+                        (lora_rank, Uhr.shape[1]), device=Uhr.device, dtype=Uhr.dtype)
+                    lora_B = torch.empty(
+                        (Vr.shape[0], lora_rank), device=Vr.device, dtype=Vr.dtype)
+                    sum_rank = 0
+                    for i in range(num_experts):
+                        ri = rank_list[i]
+                        scale_i = self.scaling[adapter_name][i]
+                        Sr_i = S[sum_rank:sum_rank + ri] / (scale_i * rho)
+                        sqrt_Sr_i = torch.sqrt(Sr_i)
+                        lora_A_i = torch.diag(sqrt_Sr_i) @ Uhr[sum_rank:sum_rank + ri, :]
+                        lora_B_i = Vr[:, sum_rank:sum_rank + ri] @ torch.diag(sqrt_Sr_i)
+                        lora_A[sum_rank:sum_rank + ri, :] = lora_A_i
+                        lora_B[:, sum_rank:sum_rank + ri] = lora_B_i
+                        self.lora_A[adapter_name][i].weight.data = (
+                            lora_A_i.contiguous())
+                        self.lora_B[adapter_name][i].weight.data = (
+                            lora_B_i.contiguous())
+                        sum_rank += ri
+                    residual = torch.zeros_like(weight.data)
+                    sum_rank = 0
+                    for i, ri in enumerate(rank_list):
+                        lora_A_i = lora_A[sum_rank:sum_rank + ri, :]
+                        lora_B_i = lora_B[:, sum_rank:sum_rank + ri]
+                        residual += self.scaling[adapter_name][i] * (lora_B_i @ lora_A_i)
+                        sum_rank += ri
+                    self.get_base_layer().weight.data -= init_cof * residual
+                else:
+                    scaling = self.scaling[adapter_name][0]
+                    Sr = S / (scaling * rho)
+                    sqrt_Sr = torch.sqrt(Sr)
+                    lora_A = torch.diag(sqrt_Sr) @ Uhr
+                    lora_B = Vr @ torch.diag(sqrt_Sr)
+                    sum_rank = 0
+                    for i in range(num_experts):
+                        ri = rank_list[i]
+                        self.lora_A[adapter_name][i].weight.data = (
+                            lora_A[sum_rank:sum_rank + ri, :].contiguous())
+                        self.lora_B[adapter_name][i].weight.data = (
+                            lora_B[:, sum_rank:sum_rank + ri].contiguous())
+                        sum_rank += ri
+                    self.get_base_layer().weight.data -= (
+                        init_cof * scaling * lora_B @ lora_A)
             svd_init()
         else:
             # Default: kaiming initialization
@@ -337,6 +405,9 @@ class LinearGSELayer(nn.Module, GSELayer):
         top_k: int = 2,
         init_type: str = "gse",
         init_cof: float = 1.0,
+        specialized_scaling_method: str = "default",
+        specialized_scaling_base: float = 2.0,
+        specialized_scaling_eps: float = 1e-12,
         skip_svd_init: bool = False,
         aux_loss_weight: float = 0.01,
         **kwargs,
@@ -347,6 +418,9 @@ class LinearGSELayer(nn.Module, GSELayer):
         self.update_layer(
             adapter_name, lora_rank, lora_alpha, lora_dropout, init_lora_weights,
             num_experts, num_generalized_experts, top_k, init_type, init_cof,
+            specialized_scaling_method=specialized_scaling_method,
+            specialized_scaling_base=specialized_scaling_base,
+            specialized_scaling_eps=specialized_scaling_eps,
             skip_svd_init=skip_svd_init, aux_loss_weight=aux_loss_weight)
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:

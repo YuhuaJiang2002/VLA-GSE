@@ -51,6 +51,7 @@ def apply_gse_to_vlm(model, cfg, skip_svd: bool = True):
             "top_k": 2,
             "init_type": "gse",
             "init_cof": 1.0,
+            "specialized_scaling_method": "default",
         }
         logger.info("Using default GSE configuration")
 
@@ -59,7 +60,9 @@ def apply_gse_to_vlm(model, cfg, skip_svd: bool = True):
                 f"num_experts={gse_cfg.get('num_experts', 8)}, "
                 f"num_generalized_experts={gse_cfg.get('num_generalized_experts', 2)}, "
                 f"top_k={gse_cfg.get('top_k', 2)}, "
-                f"init_type={init_type}, skip_svd={skip_svd})")
+                f"init_type={init_type}, "
+                f"specialized_scaling_method={gse_cfg.get('specialized_scaling_method', 'default')}, "
+                f"skip_svd={skip_svd})")
 
     vlm_model = None
     vlm_attr_path = None
@@ -92,7 +95,11 @@ def apply_gse_to_vlm(model, cfg, skip_svd: bool = True):
         top_k=gse_cfg.get("top_k", 2),
         init_type=init_type,
         init_cof=gse_cfg.get("init_cof", 1.0),
+        specialized_scaling_method=gse_cfg.get("specialized_scaling_method", "default"),
+        specialized_scaling_base=float(gse_cfg.get("specialized_scaling_base", 2.0)),
+        specialized_scaling_eps=float(gse_cfg.get("specialized_scaling_eps", 1e-12)),
         skip_svd_init=skip_svd,
+        aux_loss_weight=float(gse_cfg.get("aux_loss_weight", 0.01)),
     )
 
     gse_vlm_model = get_gse_model(vlm_model, gse_config)

@@ -179,10 +179,15 @@ The default values in the scripts reproduce the paper configuration
 
 ```text
 rank r = 16       num_experts = 8       generalized_experts = 1       top_k = 2
-s_g = 2           aux_loss_weight = 0.01
+s_g = 2           aux_loss_weight = 0.01       specialized_scaling_method = default
 batch_size = 16 per GPU (effective 128 on 8xA100)       total_steps = 80,000
 lr_vlm = 1e-5     lr_action_head = 1e-4
 ```
+
+Set `GSE_SPECIALIZED_SCALING_METHOD=gradient_scale_balancing` when launching
+`run_libero_gse.sh` to initialize specialized expert scales with the
+trace-inverse Gradient Scale Balancing rule. The default keeps the original
+implementation unchanged.
 
 Trainable params: **114.04M (2.51% of 4.55B)** — split as 48.41M in GSE modules
 and 65.62M in the action head.
